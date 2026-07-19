@@ -454,9 +454,9 @@
         lda tmpA
         cmp #OB_PTERO
         beq @gp
-        lda #73
+        lda #72                 ; cactus minGap 120 * gapCoefficient 0.6
         jmp @ga
-@gp:    lda #90
+@gp:    lda #90                 ; ptero minGap 150 * 0.6
 @ga:
         clc
         adc temp16
