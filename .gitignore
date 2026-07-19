@@ -1,0 +1,7 @@
+build/*.o
+build/*.nes
+build/map.txt
+build/labels.txt
+*.pyc
+__pycache__/
+.DS_Store
