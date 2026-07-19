@@ -338,6 +338,52 @@
 @y50:   lda #50
 @sety:
         sta obstacles + OBY, x
+        ; two live birds must never share a height: 3 birds x 3 sprites on
+        ; one scanline would break the 8-sprite limit next to the dino.
+        ; If another live ptero has this OBY, rotate 100 -> 75 -> 50 -> 100.
+        ; (Spacing rules allow at most 2 live pteros, so one pass settles it.)
+        lda #2
+        sta tmpD                ; bounded retries
+@pscan:
+        ldy #0
+@pscan_slot:
+        cpy #OB_STRIDE * OB_SLOTS
+        bcs @pdone
+        sty tmpC
+        cpx tmpC
+        beq @pnext
+        lda obstacles + OBTYPE, y
+        cmp #OB_PTERO
+        bne @pnext
+        lda obstacles + OBY, y
+        cmp obstacles + OBY, x
+        bne @pnext
+        ; conflict: rotate our height and rescan
+        lda obstacles + OBY, x
+        cmp #100
+        beq @h75
+        cmp #75
+        beq @h50
+        lda #100
+        jmp @hset
+@h75:   lda #75
+        jmp @hset
+@h50:   lda #50
+@hset:  sta obstacles + OBY, x
+        dec tmpD
+        bne @pscan
+        jmp @pdone
+@pnext:
+        iny
+        iny
+        iny
+        iny
+        iny
+        iny
+        iny
+        iny
+        jmp @pscan_slot
+@pdone:
         jsr rng_next
         and #$80
         ora #10
@@ -602,8 +648,9 @@
 @spawn:
         lda cloud_count
         cmp #CLOUD_MAX
-        bcs @done
-        jsr rng_next
+        bcc :+
+        jmp @done
+:       jsr rng_next
         bmi @maybe
         rts
 @maybe:
@@ -631,14 +678,61 @@
         sta clouds + CLX_LO, x
         lda #248
         sta clouds + CLX_HI, x
-        ; y: high sky band 40..87
-        jsr rng_next
-        and #63
-        cmp #48
-        bcc :+
-        sbc #48
-:       clc
+        ; y: one of four 16px altitude bands (40/56/72/88). Bands are
+        ; exclusive per live cloud, so two clouds can never share a
+        ; scanline - keeps the sky inside the 8-sprites-per-line limit.
+        stx tmpD                ; save new slot offset
+        lda #0
+        sta tmpC                ; occupied-band mask
+        ldx #0
+@bscan:
+        cpx #CL_STRIDE * CLOUD_MAX
+        bcs @bpick
+        lda clouds + CLY, x
+        cmp #$FF
+        beq @bnext
+        and #$7F
+        sec
+        sbc #40
+        lsr a
+        lsr a
+        lsr a
+        lsr a
+        tay
+        lda band_bit, y
+        ora tmpC
+        sta tmpC
+@bnext:
+        inx
+        inx
+        inx
+        inx
+        jmp @bscan
+@bpick:
+        jsr rng_next            ; random starting band for variety
+        and #3
+        tay
+        ldx #4
+@btry:
+        lda band_bit, y
+        bit tmpC
+        beq @bfound
+        iny
+        tya
+        and #3
+        tay
+        dex
+        bne @btry
+        ldy #0                  ; unreachable: 4 bands, max 4 clouds
+@bfound:
+        tya
+        asl a
+        asl a
+        asl a
+        asl a
+        clc
         adc #40
+        ldx tmpD                ; restore slot offset
         sta clouds + CLY, x
         jsr rng_next
         and #127

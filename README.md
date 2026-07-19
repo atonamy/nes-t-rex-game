@@ -122,8 +122,12 @@ leans on:
 - **Cacti are background tiles, not sprites.** They're streamed into the
   scrolling nametable one column at a time as the world scrolls, so even a
   wall of three large cacti costs **zero** sprites. Only the T-Rex,
-  pterodactyls, and clouds use sprites — worst case 6 per scanline, safely
-  under the NES's 8-sprite limit by construction, so there's no flicker.
+  pterodactyls, clouds, and the night moon/stars use sprites. The game
+  enforces the scanline budget structurally — two live pterodactyls are
+  never given the same flight height, and clouds are pinned to four
+  non-overlapping altitude bands — so the worst possible case is 7 sprites
+  on a line (ducking under a low pterodactyl), under the NES's 8-sprite
+  limit; measured worst over long automated runs is 6. No flicker.
 - **The score line doesn't scroll — the ground does**, on the same
   nametable. That split is done with a sprite-zero-hit trick: an invisible
   marker sprite fires mid-frame, and the NMI handler swaps the PPU's scroll

@@ -39,6 +39,10 @@ digit_tiles:
         .byte FONT_0, FONT_1, FONT_2, FONT_3, FONT_4
         .byte FONT_5, FONT_6, FONT_7, FONT_8, FONT_9
 
+; cloud altitude band occupancy bits
+band_bit:
+        .byte 1, 2, 4, 8
+
 ; ---------------------------------------------------------------------------
 ; sprite tile lists (pair indices from chr_map.inc)
 ; ---------------------------------------------------------------------------
