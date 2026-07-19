@@ -259,18 +259,16 @@
         lda tmpA
         sta obstacles + OBTYPE, x
 
-        ; size 1..3 (weighted like original: uniform)
+        ; size 1..3, uniform like the original getRandomNum(1, 3)
+        ; (rejection on 3 keeps the three outcomes equally likely - the old
+        ; mapping made size-2 groups twice as common)
+@size_roll:
         jsr rng_next
         and #3
-        beq @one
         cmp #3
-        beq @three
-        lda #2
-        jmp @sz
-@one:   lda #1
-        jmp @sz
-@three: lda #3
-@sz:
+        beq @size_roll
+        clc
+        adc #1
         sta tmpB
         ; multipleSpeed gate
         lda tmpA

@@ -48,11 +48,11 @@ Identical values:
 | Min/max jump height | 30 / 30 (end-jump at y<30) | `trex.ts` `normalJumpConfig` |
 | Drop velocity (early release) | −5 | `trex.ts` `dropVelocity` |
 | Speed-drop coefficient | ×3 fall, vy := 1 | `trex.ts` `setSpeedDrop` |
-| T-Rex position / size | x 50, 44×47, duck 59×25 | `trex.ts` config |
+| T-Rex world x position | 50 | `trex.ts` `startXPos` |
 | Collision boxes (all 9 + duck) | identical | `trex.ts`, `offline_sprite_definitions.ts` |
-| Cacti | w 17/25, y 105/90, multipleSpeed 4/7, minGap 120 | `offline_sprite_definitions.ts` |
+| Cacti | w 17/25, y 105/90, multipleSpeed 4/7, minGap 120, sizes 1–3 uniform | `offline_sprite_definitions.ts`, `obstacle.ts` |
 | Pterodactyl | w 46, y {100, 75, 50}, minSpeed 8.5, speed ±0.8, 6 fps flap | `offline_sprite_definitions.ts` |
-| Gap formula | `round(w·speed + minGap·0.6)` … ×1.5, uniform | `obstacle.ts` `getGap` |
+| Gap formula | `w·speed + minGap·0.6` … ×1.5, random in range | `obstacle.ts` `getGap` |
 | Speed range | 6 → 13 | `offline.ts` |
 | Obstacle-free grace | 3000 ms (180 frames) | `offline.ts` `clearTime` |
 | Score rate | distance × 0.025 | `distance_meter.ts` |
@@ -60,11 +60,19 @@ Identical values:
 
 Known deviations (all deliberate or inherent to the hardware):
 
+- **World motion is whole-pixel**: obstacles and the ground scroll move
+  `floor(speed)` world px per frame — the fractional part of the current
+  speed is not accumulated into motion (it *is* used for scoring and gap
+  math). At speed 8.9 the world moves 8 px/frame where the original moves
+  8.9. Everything on screen stays mutually consistent.
 - **Speed ramp**: +1/256 every 4 frames ≈ 0.000977/frame vs the original's
   0.001/frame — about 2% slower to reach max speed.
-- **8.8 fixed point**: gravity is stored as 154/256 ≈ 0.6016; the original
-  also rounds the T-Rex's y to whole pixels every frame while the port keeps
-  sub-pixel precision, so jump arcs can differ by a fraction of a pixel.
+- **8.8 fixed point**: gravity is stored as 154/256 ≈ 0.6016; the gap
+  formula truncates `w·speed` instead of rounding (≤1 px); the original
+  rounds the T-Rex's y to whole pixels every frame while the port keeps
+  sub-pixel precision — jump arcs can differ by a fraction of a pixel.
+- **RNG**: a 16-bit Galois LFSR stands in for `Math.random()`; gap and size
+  rolls have negligible modulo bias.
 - **Night duration**: 350 points (half the cycle) instead of the original's
   fixed 12 s, so day and night stay evenly split at any speed.
 - **Obstacle spawn x**: 640 instead of 600 (the NES streams cacti into the
@@ -73,6 +81,9 @@ Known deviations (all deliberate or inherent to the hardware):
 - **Frame-locked timing**: the original scales physics by real elapsed time;
   the NES steps once per video frame (60 fps NTSC — on a PAL console
   everything runs proportionally slower, as was traditional).
+- **Sprites are redrawn for the NES**: art is scaled to NES pixels and tile
+  grids, so on-screen sizes differ from the original's 44×47 T-Rex — but
+  collision runs in original world units with the original boxes.
 
 ## Controls
 
