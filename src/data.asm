@@ -280,26 +280,26 @@ SONG_NONE = $FF
 ; len in frames (6 = 16th at ~150bpm)
 ; ---------------------------------------------------------------------------
 
-; --- title theme: gentle loop ---
+; --- title theme: cinematic intro loop (256 frames) ---
 mus_title_sq1:
-        .byte NT_E5,12, NT_G5,12, NT_A5,24, NT_G5,12, NT_E5,12
-        .byte NT_D5,12, NT_E5,12, NT_C5,24, NT_R,12
-        .byte NT_E5,12, NT_G5,12, NT_A5,24, NT_G5,12, NT_E5,12
-        .byte NT_D5,12, NT_C5,12, NT_D5,36
+        ; A rising invitation, then a wider fanfare response.
+        .byte NT_C4,16, NT_E4,16, NT_G4,16, NT_C5,32
+        .byte NT_R,16, NT_G4,16, NT_A4,16
+        .byte NT_F4,16, NT_A4,16, NT_C5,16, NT_F5,32
+        .byte NT_E5,16, NT_D5,16, NT_G5,16
         .byte $FF, $FF
 mus_title_sq2:
-        .byte NT_C4,24, NT_E4,24, NT_G4,24, NT_E4,24
-        .byte NT_F4,24, NT_A4,24, NT_G4,24, NT_E4,24
-        .byte NT_C4,24, NT_E4,24, NT_G4,24, NT_C5,24
-        .byte NT_A4,24, NT_G4,24, NT_E4,24, NT_D4,24
+        .byte NT_C3,32, NT_G3,32, NT_C4,32, NT_E4,32
+        .byte NT_F3,32, NT_C4,32, NT_G3,32, NT_D4,32
         .byte $FF, $FF
 mus_title_tri:
-        .byte NT_C3,48, NT_A2,48, NT_F2,48, NT_G2,48
-        .byte NT_C3,48, NT_A2,48, NT_F2,48, NT_G2,48
+        .byte NT_C2,64, NT_G2,64, NT_F2,64, NT_G2,64
         .byte $FF, $FF
 mus_title_noi:
-        .byte 1,12, 1,12, 1,12, 1,12, 1,24, 1,12, 1,24
-        .byte 1,12, 1,12, 1,12, 1,12, 1,24, 1,12, 1,24
+        ; Silence gives the opening room; drums build into the fanfare.
+        .byte NT_R,64, 1,16, NT_R,16, 1,16, NT_R,16
+        .byte 2,16, NT_R,16, 1,16, NT_R,16
+        .byte 2,16, 1,16, 2,16, 1,16
         .byte $FF, $FF
 
 ; --- game theme placeholders ---
