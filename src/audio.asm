@@ -63,6 +63,14 @@ SFX_OWN_SQ2 = 2
         sta ch2_wait
         sta tri_wait
         sta noi_wait
+        sta star_wait
+        lda #0
+        sta star_step
+        sta star_drum_timer
+        cpx #SONG_GAME
+        bne @done
+        ; STAR SWOOP drives pulse 2 directly with sweep disabled.
+        sta SQ2_SWEEP
 @done:
         rts
 .endproc
@@ -86,6 +94,7 @@ SFX_OWN_SQ2 = 2
         sta ch2_wait
         sta tri_wait
         sta noi_wait
+        sta star_wait
         rts
 .endproc
 
@@ -103,10 +112,110 @@ SFX_OWN_SQ2 = 2
         beq @done
         lda pause_flag
         bne @done
+        lda song_id
+        cmp #SONG_GAME
+        bne @stream_music
+        jsr tick_star_game
+        rts
+@stream_music:
         jsr tick_sq1
         jsr tick_sq2
         jsr tick_tri
+        ; Game over keeps its original melodic sting and one-shot crash,
+        ; but never inherits a repeating noise-drum stream.
+        lda song_id
+        cmp #SONG_GAMEOVER
+        beq @done
         jsr tick_noise
+@done:
+        rts
+.endproc
+
+; ---------------------------------------------------------------------------
+; Exact STAR SWOOP gameplay track
+;
+; Unlike the generic note-stream player, this writes the original raw APU
+; timer, volume, duty, and noise values.  SONG_TITLE and SONG_GAMEOVER never
+; enter this routine, so their original playback path is unchanged.
+; ---------------------------------------------------------------------------
+.proc tick_star_game
+        ; End the current drum hit after its original duration.
+        lda star_drum_timer
+        beq @step
+        dec star_drum_timer
+        bne @step
+        lda #$30
+        sta NOISE_VOL
+
+@step:
+        dec star_wait
+        bne @done
+        lda #8
+        sta star_wait
+        lda star_step
+        and #$0F
+        tax
+        jsr play_star_drum
+
+        ; Dino sound effects may temporarily own pulse 2. The song keeps time
+        ; and resumes on the following step without touching gameplay logic.
+        lda sfx_own
+        and #SFX_OWN_SQ2
+        bne @advance
+        lda star_music_volume, x
+        sta SQ2_VOL
+        lda star_music_low, x
+        sta SQ2_LO
+        lda star_music_high, x
+        sta SQ2_HI
+
+@advance:
+        inc star_step
+@done:
+        rts
+.endproc
+
+.proc play_star_drum
+        lda star_drum_pattern, x
+        beq @done
+        cmp #1
+        beq @kick
+        cmp #2
+        beq @snare
+
+        ; Hi-hat: $36 volume, period $02, two frames.
+        lda #$36
+        sta NOISE_VOL
+        lda #$02
+        sta NOISE_LO
+        lda #$00
+        sta NOISE_HI
+        lda #2
+        sta star_drum_timer
+        rts
+
+@kick:
+        ; Kick: $3F volume, period $0E, four frames.
+        lda #$3F
+        sta NOISE_VOL
+        lda #$0E
+        sta NOISE_LO
+        lda #$00
+        sta NOISE_HI
+        lda #4
+        sta star_drum_timer
+        rts
+
+@snare:
+        ; Snare: $3C volume, period $05, five frames.
+        lda #$3C
+        sta NOISE_VOL
+        lda #$05
+        sta NOISE_LO
+        lda #$00
+        sta NOISE_HI
+        lda #5
+        sta star_drum_timer
 @done:
         rts
 .endproc
@@ -467,14 +576,48 @@ SFX_OWN_SQ2 = 2
         sta SQ1_HI
         rts
 @end:
-        ; release channels
+        ; Preserve Dino's original all-channel cleanup for title/game-over.
+        ; Gameplay alone needs ownership-aware cleanup so pulse-1 jump/start
+        ; effects cannot punch holes in STAR SWOOP's pulse-2 melody.
+        lda song_id
+        cmp #SONG_GAME
+        beq @owned_cleanup
         lda #0
         sta sfx_own
         lda #$30
         sta SQ1_VOL
         sta SQ2_VOL
         sta NOISE_VOL
+        jmp @retrigger
+
+@owned_cleanup:
+        ; Release and silence only channels owned by this effect.  The old
+        ; all-channel mute cut a hole in pulse 2 after Start/Jump effects,
+        ; even though those effects own pulse 1 only.
+        lda sfx_own
+        sta tmpA
+        lda #0
+        sta sfx_own
+        lda tmpA
+        and #SFX_OWN_SQ1
+        beq :+
+        lda #$30
+        sta SQ1_VOL
+:
+        lda tmpA
+        and #SFX_OWN_SQ2
+        beq :+
+        lda #$30
+        sta SQ2_VOL
+:
+        lda sfx_id
+        cmp #3
+        bne :+
+        lda #$30
+        sta NOISE_VOL
+:
         ; force music re-trigger
+@retrigger:
         lda #1
         sta ch1_wait
         sta ch2_wait

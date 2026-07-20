@@ -302,31 +302,37 @@ mus_title_noi:
         .byte 1,12, 1,12, 1,12, 1,12, 1,24, 1,12, 1,24
         .byte $FF, $FF
 
-; --- game theme: bouncy loop (48-frame phrases) ---
+; --- game theme placeholders ---
+; SONG_GAME is played by tick_star_game using the exact raw APU data below.
+; These labels remain so the generic song-pointer table stays structurally
+; unchanged. Title and game-over streams use the original generic engine.
 mus_game_sq1:
-        .byte NT_C5,6, NT_E5,6, NT_G5,6, NT_E5,6, NT_A5,6, NT_G5,6, NT_E5,6, NT_C5,6
-        .byte NT_D5,6, NT_E5,6, NT_F5,6, NT_E5,6, NT_D5,6, NT_C5,6, NT_D5,6, NT_G4,6
-        .byte NT_C5,6, NT_E5,6, NT_G5,6, NT_E5,6, NT_A5,6, NT_G5,6, NT_A5,6, NT_C6,6
-        .byte NT_G5,6, NT_E5,6, NT_D5,6, NT_E5,6, NT_C5,12, NT_R,12
+        .byte NT_R,128
         .byte $FF, $FF
 mus_game_sq2:
-        .byte NT_E4,6, NT_G4,6, NT_C5,6, NT_G4,6, NT_E4,6, NT_G4,6, NT_C5,6, NT_G4,6
-        .byte NT_F4,6, NT_A4,6, NT_C5,6, NT_A4,6, NT_F4,6, NT_A4,6, NT_C5,6, NT_A4,6
-        .byte NT_E4,6, NT_G4,6, NT_C5,6, NT_G4,6, NT_E4,6, NT_G4,6, NT_C5,6, NT_G4,6
-        .byte NT_G4,6, NT_B4,6, NT_D5,6, NT_B4,6, NT_G4,6, NT_B4,6, NT_D5,6, NT_B4,6
+        .byte NT_R,128
         .byte $FF, $FF
 mus_game_tri:
-        .byte NT_C3,12, NT_G3,12, NT_C3,12, NT_G3,12
-        .byte NT_F3,12, NT_C4,12, NT_F3,12, NT_C4,12
-        .byte NT_C3,12, NT_G3,12, NT_C3,12, NT_G3,12
-        .byte NT_G2,12, NT_D3,12, NT_G2,12, NT_D3,12
+        .byte NT_R,128
         .byte $FF, $FF
 mus_game_noi:
-        .byte 1,6, 2,6, 1,6, 2,6, 1,6, 2,6, 1,6, 2,6
-        .byte 1,6, 2,6, 1,6, 2,6, 1,6, 2,6, 1,6, 2,6
-        .byte 1,6, 2,6, 1,6, 2,6, 1,6, 2,6, 1,6, 2,6
-        .byte 1,6, 2,6, 1,6, 2,6, 1,6, 2,6, 2,3, 2,3, 2,3, 2,3
+        .byte 0,128
         .byte $FF, $FF
+
+; Raw STAR SWOOP pulse-2 sequence: timer low/high and accented duty/volume.
+star_music_low:
+        .byte $AB,$53,$1D,$53, $FD,$1D,$53,$7F
+        .byte $40,$FD,$D5,$FD, $1D,$53,$7F,$1D
+star_music_high:
+        .byte $01,$01,$01,$01, $00,$01,$01,$01
+        .byte $01,$00,$00,$00, $01,$01,$01,$01
+star_music_volume:
+        .byte $9D,$98,$9A,$98, $9C,$98,$9A,$98
+        .byte $9D,$98,$9B,$98, $9C,$98,$9A,$99
+
+; 0 = rest, 1 = kick, 2 = snare, 3 = hi-hat.
+star_drum_pattern:
+        .byte 1,0,3,0, 2,0,3,0, 1,0,1,3, 2,0,3,3
 
 ; --- game over sting ---
 mus_over_sq1:

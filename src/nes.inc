@@ -227,6 +227,12 @@ p_hi:         .res 1
 p_vy:         .res 1        ; saved vram buffer index
 p_mode:       .res 1        ; 1 = string via temp_ptr, 0 = fill with FONT_SP
 
+; Exact STAR SWOOP gameplay-music state. Appended so existing gameplay ZP
+; addresses remain unchanged.
+star_step:       .res 1
+star_wait:       .res 1
+star_drum_timer: .res 1
+
 ; ---------------------------------------------------------------------------
 ; RAM
 ; ---------------------------------------------------------------------------
