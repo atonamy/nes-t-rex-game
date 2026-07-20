@@ -275,6 +275,14 @@ nes.cfg         ld65 linker config (NROM-256, vertical mirroring)
 Makefile
 ```
 
+## License
+
+NES port code and original port assets are **MIT** — see [`LICENSE`](LICENSE).
+
+Derived Chromium dino design, physics constants, obstacle rules, scoring
+behavior, and related reference material remain under Chromium's **BSD-style**
+terms — see [`NOTICE`](NOTICE).
+
 ## Credits
 
 - Original game design, art, and physics: the Chromium project —

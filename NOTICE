@@ -1,0 +1,35 @@
+T-Rex Runner (NES port)
+=======================
+
+This repository is an independent Nintendo Entertainment System port of
+Chrome's offline dinosaur game.
+
+NES port
+--------
+Copyright (c) 2026 atonamy
+
+The NES implementation (6502 assembly, tools authored for this project,
+build scripts, documentation, and NES-adapted assets created for this port)
+is licensed under the MIT License. See the LICENSE file in this repository.
+
+Chromium dino_game
+------------------
+Game design, physics constants, obstacle rules, scoring behavior, collision
+box definitions, and portions of visual design are derived from Chromium's
+offline dinosaur game:
+
+  components/neterror/resources/dino_game/
+
+Copyright (c) The Chromium Authors
+Use of that upstream source is governed by a BSD-style license. See the
+Chromium project LICENSE:
+
+  https://chromium.googlesource.com/chromium/src/+/main/LICENSE
+
+Reference TypeScript snapshots that may appear under reference/ remain
+subject to the Chromium BSD-style terms and are not re-licensed as MIT.
+
+Third-party notice summary
+--------------------------
+- Original dino game design / physics / rules: Chromium Authors (BSD-style)
+- NES port code and original port assets: atonamy (MIT)
