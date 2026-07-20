@@ -289,7 +289,7 @@ terms — see [`NOTICE`](NOTICE).
   [`components/neterror/resources/dino_game/`](https://source.chromium.org/chromium/chromium/src/+/main:components/neterror/resources/dino_game/)
   (BSD-licensed).
 - NES port: [atonamy](https://github.com/atonamy), 2026.
-- Engine: Kimi K3.
-- Debugging, refinement, and bug fixes: Fable 5.
-- Music: GPT-5.6 Sol.
+- Engine code generation: Kimi K3.
+- AI-assisted debugging, refinement, and bug fixes: Fable 5.
+- Music generation: GPT-5.6 Sol.
 - Development and debugging tool: [atonamy/mesen-agent](https://github.com/atonamy/mesen-agent).
