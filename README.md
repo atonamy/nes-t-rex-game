@@ -1,3 +1,9 @@
+<p align="center">
+<img width="320" src="https://github.com/user-attachments/assets/700d6db7-bb4e-4d4f-ab28-c284568d5315" />
+</p>
+
+
+
 # T-Rex Runner — Chrome Dino, on an actual NES
 
 A from-scratch port of Chrome's offline dinosaur game to the Nintendo
