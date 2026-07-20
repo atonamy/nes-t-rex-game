@@ -181,6 +181,12 @@ trex_box_count: .res 1
 ob_box_count: .res 1
 ob_box_idx:   .res 1
 ob_totw:      .res 1
+ob_msize:     .res 1        ; cactus group size (1-3)
+ob_member:    .res 1        ; member large-bits, bit0 = current member
+ob_mcount:    .res 1        ; members remaining (0 = no member walk)
+ob_mxoff:     .res 1        ; current member x offset within the group
+ob_ytop:      .res 1        ; obstacle world y (top) for the current boxes
+ob_stretch:   .res 1        ; 1 = apply original uniform-group box stretch
 a_bx:         .res 1
 a_by:         .res 1
 a_bw:         .res 1

@@ -25,7 +25,8 @@ Ported from the Chromium source:
 - **Original obstacle rules**: small/large cacti in groups of 1–3
   (speed-gated), pterodactyls at 3 heights (jump / duck / fly-over) once speed
   passes 8.5, the original gap formula (`width*speed + minGap*0.6 .. *1.5`),
-  and the max-2-duplicate-in-a-row rule.
+  and the max-2-duplicate-in-a-row rule. As a twist beyond the original,
+  at high speed a group can mix small and large plants (see deviations).
 - **Speed ramp** 6 → 13 and **score** at the original rate (1 point per 40
   world px), 5-digit display, persistent HI score, a 100-point ding + flash.
 - **Day/night cycle**: palette inversion every 700 points; a stationary
@@ -84,6 +85,11 @@ Known deviations (all deliberate or inherent to the hardware):
 - **Sprites are redrawn for the NES**: art is scaled to NES pixels and tile
   grids, so on-screen sizes differ from the original's 44×47 T-Rex — but
   collision runs in original world units with the original boxes.
+- **Mixed cactus groups** (deliberate addition): from speed 7 each plant in
+  a group rolls small/large independently, so groups like small-large or
+  large-large-small appear — the original only spawns uniform groups.
+  Uniform groups keep the original stretched group collision box; mixed
+  groups collide per-plant with the original single-cactus boxes.
 
 ## Controls
 

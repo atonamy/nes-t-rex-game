@@ -43,6 +43,10 @@ digit_tiles:
 band_bit:
         .byte 1, 2, 4, 8
 
+; cactus group member masks: (1 << size) - 1
+mix_masks:
+        .byte 1, 3, 7
+
 ; ---------------------------------------------------------------------------
 ; sprite tile lists (pair indices from chr_map.inc)
 ; ---------------------------------------------------------------------------

@@ -855,8 +855,36 @@
         and #63                 ; circular distance (cols straddling 63->0)
         cmp obstacles + OBANIM, x
         bcs @next_ob
-        sta tmpD
-        lda obstacles + OBTYPE, x
+        sta tmpD                ; column within the group
+        ; resolve which member covers this column: walk the large-bits
+        ; (OBSIZE bits 4-6), small members are 1 column wide, large are 2.
+        ; tmpC gets the member's type, tmpD its art column (0, or 0/1).
+        lda obstacles + OBSIZE, x
+        lsr a
+        lsr a
+        lsr a
+        lsr a
+        sta tmpB                ; member large-bits, bit0 = leftmost
+@member:
+        lsr tmpB                ; carry = this member large
+        bcs @m_large
+        lda tmpD                ; small member covers 1 column
+        beq @m_small
+        dec tmpD
+        jmp @member
+@m_large:
+        lda tmpD                ; large member covers 2 columns
+        cmp #2
+        bcc @m_lhit
+        dec tmpD
+        dec tmpD
+        jmp @member
+@m_small:
+        lda #OB_CACT_SMALL
+        sta tmpC
+        jmp @found
+@m_lhit:
+        lda #OB_CACT_LARGE
         sta tmpC
         jmp @found
 @next_ob:

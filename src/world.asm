@@ -30,27 +30,35 @@
 .endproc
 
 ; ---------------------------------------------------------------------------
-; ob_width2: slot X -> A = width in world px (base * size)
+; ob_width2: slot X -> A = width in world px (sum of member widths)
+; OBSIZE packs the group: low 2 bits = size 1-3, bits 4-6 = large-flags per
+; member (bit4 = leftmost). Small member = 17 world px, large = 25.
+; Clobbers A, Y, tmpB.
 ; ---------------------------------------------------------------------------
 .proc ob_width2
         lda obstacles + OBTYPE, x
-        cmp #OB_CACT_SMALL
-        beq @s
-        cmp #OB_CACT_LARGE
-        beq @l
+        cmp #OB_PTERO
+        bne @cact
         lda #46
         rts
-@s:     lda #17
-        jmp @m
-@l:     lda #25
-@m:
-        sta tmpB
+@cact:
+        lda obstacles + OBSIZE, x
+        lsr a
+        lsr a
+        lsr a
+        lsr a
+        sta tmpB                ; member large-bits, bit0 = leftmost
+        lda obstacles + OBSIZE, x
+        and #3
+        tay
         lda #0
-        ldy obstacles + OBSIZE, x
 @acc:
-        clc
-        adc tmpB
-        dey
+        lsr tmpB                ; carry = this member is large
+        bcs @big
+        adc #17                 ; carry clear: +17
+        jmp @nx
+@big:   adc #24                 ; carry set: +24+1 = +25
+@nx:    dey
         bne @acc
         rts
 .endproc
@@ -296,6 +304,40 @@
         lda tmpB
         sta obstacles + OBSIZE, x
 
+        ; member large-bits go in OBSIZE bits 4-6 (bit4 = leftmost plant).
+        ; From speed 7 (the large-cactus group gate) every member of a
+        ; group rolls small/large independently, so groups can mix sizes:
+        ; SL, LS, SSL, LSL, ... as well as the original uniform runs.
+        ; Below speed 7 groups stay uniform, exactly like the original.
+        lda tmpA
+        cmp #OB_PTERO
+        beq @mix_done
+        ldy tmpB
+        lda mix_masks-1, y      ; (1 << size) - 1
+        sta tmpC
+        lda tmpB
+        cmp #2
+        bcc @mix_uniform        ; single plant: primary type decides
+        lda speed_88+1
+        cmp #7
+        bcc @mix_uniform
+        jsr rng_next            ; one bit per member: 0 small, 1 large
+        and tmpC
+        jmp @mix_set
+@mix_uniform:
+        lda tmpA
+        cmp #OB_CACT_LARGE
+        bne @mix_done           ; all-small group: bits stay 0
+        lda tmpC
+@mix_set:
+        asl a
+        asl a
+        asl a
+        asl a
+        ora tmpB
+        sta obstacles + OBSIZE, x
+@mix_done:
+
         ; x = 600 + base width
         lda tmpA
         cmp #OB_CACT_SMALL
@@ -434,16 +476,21 @@
         tax
         lda tmpD
         sta obstacles + OBY, x
-        ; width in columns: small = size, large = size*2
-        lda tmpA
-        cmp #OB_CACT_LARGE
-        bne @wc_small
-        lda tmpB
-        asl a
-        jmp @wc
-@wc_small:
-        lda tmpB
-@wc:
+        ; width in columns: 1 per small member, 2 per large member
+        lda obstacles + OBSIZE, x
+        lsr a
+        lsr a
+        lsr a
+        lsr a
+        sta tmpC                ; member large-bits
+        lda obstacles + OBSIZE, x
+        and #3
+        tay                     ; A = size = 1 col per member
+@wc_cols:
+        lsr tmpC
+        adc #0                  ; +1 more if this member is large (carry)
+        dey
+        bne @wc_cols
         sta obstacles + OBANIM, x
 @gap:
         ; minGap = round(width*speed) + round(minGapType*0.6)
@@ -794,9 +841,85 @@
 
 ; ---------------------------------------------------------------------------
 ; collide_obstacle - slot X vs dino. Carry set = hit.
-; Iterates trex boxes x obstacle boxes with a clean AABB.
+; Classifies the obstacle once: ptero and uniform cactus groups run the
+; original single-pass box set (uniform groups keep the original stretch:
+; box1 widened across the group, box2 moved to the right edge). Mixed
+; groups run the trex boxes once per member, each member using its own
+; small/large box table at its accumulated x offset - the original has no
+; mixed groups, so there is no original rule to preserve there.
 ; ---------------------------------------------------------------------------
 .proc collide_obstacle
+        lda obstacles + OBTYPE, x
+        cmp #OB_PTERO
+        bne @classify_cact
+        lda #<ptero_boxes
+        sta temp16
+        lda #>ptero_boxes
+        sta temp16+1
+        lda #5
+        sta ob_box_count
+        lda obstacles + OBY, x
+        sta ob_ytop
+        lda #0
+        sta ob_mcount           ; no member walk
+        sta ob_mxoff
+        sta ob_stretch
+        jmp @trex_setup
+@classify_cact:
+        lda obstacles + OBSIZE, x
+        lsr a
+        lsr a
+        lsr a
+        lsr a
+        sta ob_member           ; member large-bits, bit0 = leftmost
+        lda obstacles + OBSIZE, x
+        and #3
+        sta ob_msize
+        tay
+        lda ob_member
+        beq @uni_small          ; no large members -> uniform small
+        cmp mix_masks-1, y
+        beq @uni_large          ; all members large -> uniform large
+        ; mixed group: walk members, no stretch
+        lda ob_msize
+        sta ob_mcount
+        lda #0
+        sta ob_mxoff
+        sta ob_stretch
+        jsr member_select
+        jmp @trex_setup
+@uni_small:
+        lda #<cact_s_boxes
+        sta temp16
+        lda #>cact_s_boxes
+        sta temp16+1
+        lda #105
+        sta ob_ytop
+        jmp @uni_fin
+@uni_large:
+        lda #<cact_l_boxes
+        sta temp16
+        lda #>cact_l_boxes
+        sta temp16+1
+        lda #90
+        sta ob_ytop
+@uni_fin:
+        lda #3
+        sta ob_box_count
+        lda #0
+        sta ob_mcount
+        sta ob_mxoff
+        sta ob_stretch
+        lda ob_msize
+        cmp #2
+        bcc @trex_setup
+        ; original group rule: size > 1 stretches box1 / moves box2
+        lda #1
+        sta ob_stretch
+        jsr ob_width2
+        sta ob_totw
+
+@trex_setup:
         lda dino_flags
         and #2
         bne @duck
@@ -806,7 +929,7 @@
         sta temp_ptr
         lda #>trex_run_boxes
         sta temp_ptr+1
-        jmp @go
+        jmp @tbox_loop
 @duck:
         lda #1
         sta trex_box_count
@@ -814,7 +937,6 @@
         sta temp_ptr
         lda #>trex_duck_box
         sta temp_ptr+1
-@go:
 @tbox_loop:
         ldy #0
         lda (temp_ptr), y
@@ -832,36 +954,6 @@
         iny
         lda (temp_ptr), y
         sta a_bh
-        ; choose obstacle box table
-        lda obstacles + OBTYPE, x
-        cmp #OB_CACT_SMALL
-        beq @cs
-        cmp #OB_CACT_LARGE
-        beq @cl
-        lda #<ptero_boxes
-        sta temp16
-        lda #>ptero_boxes
-        sta temp16+1
-        lda #5
-        sta ob_box_count
-        lda #0                  ; obstacle world y comes from OBY
-        jmp @set
-@cs:
-        lda #<cact_s_boxes
-        sta temp16
-        lda #>cact_s_boxes
-        sta temp16+1
-        lda #3
-        sta ob_box_count
-        jmp @set
-@cl:
-        lda #<cact_l_boxes
-        sta temp16
-        lda #>cact_l_boxes
-        sta temp16+1
-        lda #3
-        sta ob_box_count
-@set:
         lda #0
         sta ob_box_idx
 @obox_loop:
@@ -880,15 +972,9 @@
         iny
         lda (temp16), y
         sta b_bh
-        ; cactus size>1 box adjustments
-        lda obstacles + OBTYPE, x
-        cmp #OB_PTERO
+        ; uniform-group box adjustments (original rule)
+        lda ob_stretch
         beq @no_adj
-        lda obstacles + OBSIZE, x
-        cmp #1
-        beq @no_adj
-        jsr ob_width2           ; A = total width
-        sta ob_totw
         lda ob_box_idx
         cmp #1
         bne @adj2
@@ -919,22 +1005,14 @@
         sta b_bxr
 @no_adj:
         ; obstacle world y
-        lda obstacles + OBTYPE, x
-        cmp #OB_PTERO
-        beq @py
-        cmp #OB_CACT_SMALL
-        beq @sy
-        lda #90
-        jmp @yy
-@sy:    lda #105
-        jmp @yy
-@py:    lda obstacles + OBY, x
-@yy:
+        lda ob_ytop
         clc
         adc b_by
         sta b_by
-        ; abs x (16-bit)
+        ; abs x (16-bit) = ob.x + member offset + box rel x
         lda b_bxr
+        clc
+        adc ob_mxoff            ; both < 128, never carries
         clc
         adc obstacles + OBX_LO, x
         sta b_bx
@@ -1003,10 +1081,60 @@
         adc #0
         sta temp_ptr+1
         dec trex_box_count
-        beq @miss
+        beq @member_next
         jmp @tbox_loop
+@member_next:
+        ; mixed group: step to the next member and rerun the trex boxes
+        lda ob_mcount
+        beq @miss               ; single-pass obstacle: done
+        dec ob_mcount
+        beq @miss               ; that was the last member
+        lda ob_member
+        and #1
+        bne @adv25
+        lda ob_mxoff
+        clc
+        adc #17
+        jmp @adv_s
+@adv25:
+        lda ob_mxoff
+        clc
+        adc #25
+@adv_s:
+        sta ob_mxoff
+        lsr ob_member
+        jsr member_select
+        jmp @trex_setup
 @miss:
         clc
+        rts
+.endproc
+
+; ---------------------------------------------------------------------------
+; member_select - box table + world y for the current member (ob_member
+; bit0) of a mixed cactus group. Members use the plain single-plant boxes.
+; ---------------------------------------------------------------------------
+.proc member_select
+        lda ob_member
+        and #1
+        bne @big
+        lda #<cact_s_boxes
+        sta temp16
+        lda #>cact_s_boxes
+        sta temp16+1
+        lda #105
+        sta ob_ytop
+        jmp @fin
+@big:
+        lda #<cact_l_boxes
+        sta temp16
+        lda #>cact_l_boxes
+        sta temp16+1
+        lda #90
+        sta ob_ytop
+@fin:
+        lda #3
+        sta ob_box_count
         rts
 .endproc
 
