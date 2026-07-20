@@ -106,6 +106,11 @@ SFX_OWN_SQ2 = 2
         lda sfx_timer
         beq @music
         jsr sfx_tick
+        ; Hold the game-over melody until the crash has fully finished so
+        ; pulse 1, pulse 2, and triangle begin the lament together.
+        lda song_id
+        cmp #SONG_GAMEOVER
+        beq @done
 @music:
         lda song_id
         cmp #SONG_NONE
@@ -121,8 +126,8 @@ SFX_OWN_SQ2 = 2
         jsr tick_sq1
         jsr tick_sq2
         jsr tick_tri
-        ; Game over keeps its original melodic sting and one-shot crash,
-        ; but never inherits a repeating noise-drum stream.
+        ; Game over keeps its one-shot crash, but never inherits a repeating
+        ; noise-drum stream beneath the sad melody.
         lda song_id
         cmp #SONG_GAMEOVER
         beq @done
@@ -135,8 +140,8 @@ SFX_OWN_SQ2 = 2
 ; Exact STAR SWOOP gameplay track
 ;
 ; Unlike the generic note-stream player, this writes the original raw APU
-; timer, volume, duty, and noise values.  SONG_TITLE and SONG_GAMEOVER never
-; enter this routine, so their original playback path is unchanged.
+; timer, volume, duty, and noise values. SONG_TITLE and SONG_GAMEOVER remain
+; on the generic stream player and never enter this routine.
 ; ---------------------------------------------------------------------------
 .proc tick_star_game
         ; End the current drum hit after its original duration.

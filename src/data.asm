@@ -334,18 +334,24 @@ star_music_volume:
 star_drum_pattern:
         .byte 1,0,3,0, 2,0,3,0, 1,0,1,3, 2,0,3,3
 
-; --- game over sting ---
+; --- game over theme: slow A-minor lament (256 frames) ---
 mus_over_sq1:
-        .byte NT_C5,10, NT_G4,10, NT_E4,10, NT_C4,30, NT_R,20
+        .byte NT_A4,24, NT_G4,16, NT_E4,24
+        .byte NT_F4,24, NT_E4,16, NT_C4,24
+        .byte NT_D4,24, NT_F4,16, NT_E4,24
+        .byte NT_D4,16, NT_C4,16, NT_B3,16, NT_GS3,16
         .byte $FF, $FF
 mus_over_sq2:
-        .byte NT_E4,10, NT_C4,10, NT_G3,10, NT_E3,30, NT_R,20
+        .byte NT_C4,32, NT_E4,32
+        .byte NT_C4,32, NT_A3,32
+        .byte NT_A3,32, NT_D4,32
+        .byte NT_B3,32, NT_GS3,32
         .byte $FF, $FF
 mus_over_tri:
-        .byte NT_C3,10, NT_C3,10, NT_G2,10, NT_C3,30, NT_R,20
+        .byte NT_A2,64, NT_F2,64, NT_D2,64, NT_E2,64
         .byte $FF, $FF
 mus_over_noi:
-        .byte 2,10, 1,10, 1,10, 2,30, 1,20
+        .byte NT_R,128, NT_R,128
         .byte $FF, $FF
 
 ; song pointer tables
