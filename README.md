@@ -136,6 +136,124 @@ leans on:
 - **Decimal score with manual BCD**, 16-bit RNG and gap math, and a
   fixed-point jump arc — all in 6502 assembly with no floating point.
 
+## Architecture
+
+The port is built around one idea: **simulate Chrome's game, render the NES
+afterward.** Physics, gaps, scoring, and collision stay in the original
+600×150 world with 8.8 fixed-point math. NES pixels, OAM slots, and nametable
+columns are derived only at draw / stream time (`×109/256` horizontal,
+`×174/256` vertical). That keeps Chromium constants intact instead of retuning
+everything for a 256×240 screen.
+
+### Modules
+
+```mermaid
+flowchart TB
+  main["main.asm<br/>iNES header · includes · vectors"] --> reset["reset.asm<br/>boot · NMI · main loop"]
+  reset --> input["input.asm<br/>joypad + edges"]
+  reset --> game["game.asm<br/>states · physics · score · scroll"]
+  reset --> audio["audio.asm<br/>music + SFX"]
+  game --> world["world.asm<br/>obstacles · clouds · collision · RNG"]
+  game --> render["render.asm<br/>OAM · HUD · panels"]
+  game --> ppu["ppu.asm<br/>VRAM queue · palettes · nametables"]
+  render --> ppu
+  world --> data["data.asm / nes.inc / chr_map.inc<br/>tables · constants · tile indices"]
+  game --> data
+  render --> data
+  audio --> data
+```
+
+| Layer | Files | Responsibility |
+|---|---|---|
+| Boot / frame | `reset.asm` | Reset, NMI (PPU + APU), main-loop dispatch |
+| Input | `input.asm` | Controller shift register → `joy_cur` / `joy_press` / `joy_release` |
+| Game logic | `game.asm` | State machine, jump physics, speed/score/night, world scroll + BG column stream |
+| World | `world.asm` | Obstacle spawn/move, clouds, multi-box collision, LFSR RNG, night sky pick |
+| Present | `render.asm` | Shadow OAM (dino, pteros, clouds, moon/stars, sprite-0 marker), score tiles, UI |
+| PPU I/O | `ppu.asm` | Deferred VRAM buffer, palette load, title/playfield nametable build |
+| Audio | `audio.asm` | 4-channel sequencer + one-shot SFX with channel ownership |
+| Data | `data.asm`, `nes.inc`, `chr_map.inc` | Collision boxes, palettes, music, hardware map, ZP layout |
+
+### Frame loop
+
+Work is split the usual NES way: **NMI owns the PPU and APU; the main thread
+owns simulation.** The main loop sleeps on `nmi_done`, runs one state tick, then
+sleeps again — so logic is locked to vblank (60 Hz NTSC).
+
+```mermaid
+sequenceDiagram
+  participant PPU
+  participant NMI as NMI (reset.asm)
+  participant Main as Main loop
+  participant State as state_* (game/world/render)
+
+  PPU->>NMI: vblank
+  NMI->>NMI: OAM DMA (shadow → PPU)
+  NMI->>NMI: vram_flush + optional palette
+  NMI->>NMI: HUD scroll (x=0)
+  NMI->>PPU: wait sprite-0 clear, then hit
+  NMI->>NMI: playfield scroll (scroll_x / scroll_nt)
+  NMI->>NMI: audio_tick
+  NMI->>Main: nmi_done = 1
+
+  Main->>Main: read_joypad, rng_tick
+  Main->>State: dispatch game_state
+  Note over State: PLAY: input → physics → score/night<br/>→ scroll/stream → obstacles/clouds<br/>→ collision → OAM/HUD
+  State-->>Main: buffer VRAM + fill oam_shadow
+  Main->>Main: wait next nmi_done
+```
+
+During `ST_PLAY` the order is fixed so side effects stay predictable:
+
+1. **Input / physics** — jump, duck, speed-drop, 8.8 gravity integration  
+2. **Meter** — speed ramp, distance → score, night trigger  
+3. **World** — scroll accumulator, BG column stream (ground + cacti), obstacles, clouds  
+4. **Collide** — original multi-box AABBs in world units  
+5. **Present** — rebuild shadow OAM + queue score digit tiles  
+
+NMI never runs gameplay. It only pushes the previous frame's OAM/VRAM, performs
+the sprite-zero scroll split, and ticks audio.
+
+### Coordinate spaces
+
+```mermaid
+flowchart LR
+  subgraph sim ["Simulation (Chromium units)"]
+    W["World 600×150<br/>speed, gaps, boxes, dino y in 8.8"]
+  end
+  subgraph nes ["Presentation (NES)"]
+    BG["BG columns<br/>cacti + ground streamed into nametables"]
+    SPR["Sprites<br/>dino · ptero · clouds · moon/stars · S0 marker"]
+    HUD["HUD band<br/>score / HI via VRAM buffer"]
+  end
+  W -->|"x × 109/256"| SPR
+  W -->|"y × 174/256"| SPR
+  W -->|"column stream while scrolling"| BG
+  W -->|"decimal digits"| HUD
+```
+
+Cacti never become sprites: as the playfield scrolls, `stream_column` writes the
+next vertical tile strip into the nametable ahead of the camera. Pterodactyls,
+clouds, and the T-Rex stay in OAM, with flight heights and cloud bands chosen so
+a scanline cannot exceed the hardware 8-sprite limit.
+
+### Game states
+
+```mermaid
+stateDiagram-v2
+  [*] --> TITLE
+  TITLE --> INTRO: START
+  INTRO --> PLAY: dino reaches x = 50
+  PLAY --> PAUSE: START
+  PAUSE --> PLAY: START
+  PLAY --> OVER: collision
+  OVER --> INTRO: START / A after delay
+```
+
+`INTRO` rebuilds the playfield, resets speed/score/obstacles, and runs the dino
+in from the left while the ground already scrolls — then hands off to `PLAY`
+with the same systems live.
+
 ## Project structure
 
 ```
